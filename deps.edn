@@ -1,0 +1,2 @@
+{:deps {berkeley-db {:local/root "./je-7.5.11/lib/je-7.5.11.jar"}}
+ :paths ["resources" "src" "test" "benchmark"]}
