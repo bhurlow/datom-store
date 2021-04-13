@@ -1,4 +1,5 @@
 (ns datom-store.core
+  ; (:refer-clojure :exlude [get]) 
   (:require [clojure.java.io :as io])
   (:import [com.sleepycat.je DatabaseException DatabaseEntry LockMode CacheMode]
            [com.sleepycat.je CheckpointConfig StatsConfig VerifyConfig]
@@ -61,35 +62,41 @@
     (= a b)))
 
 
-(def env
-  (Environment.
-    (io/file "./bdb")
-    (doto (EnvironmentConfig.)
-      (.setAllowCreate true)
-      (.setTransactional true))))
-
 
 (def datom-comparator
   (comparator compare-rows))
 
 
-(def db-config
+(defn make-env [file-path]
+  (Environment.
+    (io/file file-path)
+    (doto (EnvironmentConfig.)
+      (.setAllowCreate true)
+      (.setTransactional true))))
+
+
+(defn make-db-config [_]
   (doto (DatabaseConfig.)
-    (.setTransactional true)
+    ; (.setTransactional true)
     (.setAllowCreate true)
     (.setOverrideBtreeComparator true)
-    (.setBtreeComparator DatomComparator)))
+    (.setBtreeComparator DatomComparator)
+    (.setDeferredWrite true)))
 
 
-(def database
+(defn open-db [env {:keys [db-name]}]
   (.openDatabase
    env
    nil
-   "test3"
-   db-config))
+   db-name
+   ;; TODO 
+   ;; pass config
+   (make-db-config nil)))
 
 
-(defn db-get [db k]
+;; TODO
+;; handle operation status
+(defn get [db k]
   (let [result-entry (DatabaseEntry.)
         get-result (.get db
                          nil
@@ -99,9 +106,11 @@
     (read-db-entry result-entry)))
 
 
-(defn db-put! [db k]
+;; TODO
+;; handle operation status
+(defn put! [bdb k]
   (.put
-    db
+    bdb
     nil
     (write-db-entry k)
     (write-db-entry k)))
@@ -109,15 +118,15 @@
 
 ;; ===== cursors
 
+;; TODO handle .getNext
+;; operation result
 (defn cursor-next [cursor k]
   (let [next-entry (DatabaseEntry.)]
-    (println
-      ".getNext res"
-      (.getNext
-        cursor
-        (write-db-entry k)
-        next-entry
-        LockMode/DEFAULT))
+    (.getNext
+      cursor
+      (write-db-entry k)
+      next-entry
+      LockMode/DEFAULT)
     (read-db-entry next-entry)))
 
 
@@ -133,27 +142,33 @@
 
 ;; create a cursor starting at k
 (defn search-cursor 
-  ([k]
-   (let [cursor (.openCursor database nil nil)]
+  ([bdb k]
+   (let [cursor (.openCursor bdb nil nil)]
      (search-cursor 
+       bdb
        cursor
        (cursor-search-key cursor k))))
-  ([cursor v]
+  ([bdb cursor v]
    (lazy-seq
      (cons v 
            (search-cursor 
+             bdb
              cursor
              (cursor-next cursor v))))))
 
+
+(defn sync! [bdb]
+  (.sync bdb))
 
 ;; ===== scratch
 
 (comment
   (db-put! database [124 :user/foo "pizza"]))
 
-(defn test1 []
-  (type
-    (db-get database [124 :user/foo "pizza"])))
+(comment
+  (defn test1 []
+    (type
+      (db-get database [124 :user/foo "pizza"]))))
 
 
 
