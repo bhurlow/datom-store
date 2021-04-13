@@ -1,6 +1,7 @@
 (ns datom-store.core
   ; (:refer-clojure :exlude [get]) 
-  (:require [clojure.java.io :as io])
+  (:require [clojure.java.io :as io]
+            [datascript.core :as ds])
   (:import [com.sleepycat.je DatabaseException DatabaseEntry LockMode CacheMode]
            [com.sleepycat.je CheckpointConfig StatsConfig VerifyConfig]
            [com.sleepycat.je Environment EnvironmentConfig EnvironmentMutableConfig]
@@ -116,6 +117,12 @@
     (write-db-entry k)))
 
 
+(defn delete! [bdb k]
+  (.delete bdb
+           nil
+           (write-db-entry k)))
+
+
 ;; ===== cursors
 
 ;; TODO handle .getNext
@@ -160,39 +167,11 @@
 (defn sync! [bdb]
   (.sync bdb))
 
-;; ===== scratch
 
-(comment
-  (db-put! database [124 :user/foo "pizza"]))
-
-(comment
-  (defn test1 []
-    (type
-      (db-get database [124 :user/foo "pizza"]))))
-
-
-
-(comment
-  (time
-    (doall
-      (take 4
-       (search-cursor [4 :user/likes "pizza"])))))
-
-
-(comment
-  (time
-    (doseq [x (range 50)]
-      (println
-        (db-put! database [x :user/likes "pizza"])))))
-
-
-(comment
-  (time
-    (.count database)))
-
-
-(comment
-  (.getStats database
-             (StatsConfig.)))
+(defn stats [bdb]
+  (let [stats-res (.getStats bdb (StatsConfig.))]
+    (.toString stats-res)))
+    ; {:leaf-node-count (.getLeafNodeCount stats-res)
+    ;  :main-tree-max-depth (.getMainTreeMaxDepth stats-res)}))
 
 ;

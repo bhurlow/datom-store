@@ -1,2 +1,3 @@
-{:deps {berkeley-db {:local/root "./je-7.5.11/lib/je-7.5.11.jar"}}
+{:deps {berkeley-db {:local/root "./je-7.5.11/lib/je-7.5.11.jar"}
+        datascript {:mvn/version "1.0.7"}}
  :paths ["resources" "src" "test" "benchmark"]}
